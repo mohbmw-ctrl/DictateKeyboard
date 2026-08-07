@@ -1,0 +1,46 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Fetch Sherpa-ONNX Native Libraries
+        run: |
+          chmod +x tools/fetch-sherpa-onnx.sh
+          bash tools/fetch-sherpa-onnx.sh
+
+      - name: Embed Whisper Medium Model
+        run: |
+          mkdir -p app/src/main/assets/models
+          cd app/src/main/assets/models
+          wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-medium.tar.bz2
+          tar -xjvf sherpa-onnx-whisper-medium.tar.bz2
+          rm sherpa-onnx-whisper-medium.tar.bz2
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DictateKeyboard-Medium-APK
+          path: app/build/outputs/apk/debug/*.apk
+
